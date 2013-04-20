@@ -1,0 +1,13 @@
+# Ignored files
+
+AppPackages/*
+bin/*
+Common/*
+obj/*
+Properties/*
+ServiceReferences/*
+Package
+Package.StoreAssociation.xml
+SynesthesiaChaos_StoreKey.pfx
+SynesthesiaChaos_TemporaryKey.pfx
+SynesthesiaChaos.csproj*

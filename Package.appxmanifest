@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
+  <Identity Name="50339EvanPolekoff.SynesthesiaChaos" Publisher="CN=534D5549-F38F-4ED8-B8C1-5D006C579293" Version="1.0.1.1" />
+  <Properties>
+    <DisplayName>Synesthesia Chaos</DisplayName>
+    <PublisherDisplayName>Evan Polekoff</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Prerequisites>
+    <OSMinVersion>6.2.1</OSMinVersion>
+    <OSMaxVersionTested>6.2.1</OSMaxVersionTested>
+  </Prerequisites>
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="SynesthesiaChaos.App">
+      <VisualElements DisplayName="Synesthesia Chaos" Logo="Assets\Logo.png" SmallLogo="Assets\SmallLogo.png" Description="You are a ninja who must escape the heavily armed fortress! Thankfully, you are a ninja with Synesthesia, so you see and hear the cannon shots as colorful squares and music notes. Dodge the bullets and escape for as long as you can!" ForegroundText="light" BackgroundColor="#7D26CD" ToastCapable="false">
+        <DefaultTile ShowName="noLogos" WideLogo="Assets\WideLogo.png" ShortName="Synesthesia" />
+        <SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#000000" />
+        <InitialRotationPreference>
+          <Rotation Preference="landscape" />
+          <Rotation Preference="landscapeFlipped" />
+        </InitialRotationPreference>
+      </VisualElements>
+    </Application>
+  </Applications>
+</Package>
