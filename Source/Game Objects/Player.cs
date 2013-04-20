@@ -29,6 +29,8 @@ namespace SynesthesiaChaos
         public Animation rollAnimation;
         public Animation wallslideAnimation;
         bool directionRight= true;
+        bool movingRight = true;
+        float oldX;
         int animSpeed = 40;
         public Rectangle rectangle;
 
@@ -40,7 +42,8 @@ namespace SynesthesiaChaos
         int direction = 1;//This is a positive/negative modifier for acceleration.
         double gravity;
         double regularGravity = 0.4;
-        int maxSpeed = 7;
+        int maxSpeed;
+        int regularMaxSpeed = 7;
         int jumpHeight = 10;
         int shortHopHeight = 6;
         int terminalVelocity;
@@ -57,6 +60,7 @@ namespace SynesthesiaChaos
         public int burstTimer;
         public int burstTimerMax = 120;
         public bool burstMode;
+        public int burstDistance = 0;//The amount of time(distance) spent bursting.
 
         //Spinning
         public bool spinning = false;
@@ -176,7 +180,7 @@ namespace SynesthesiaChaos
 
             //Set the burst speed.
             if (level <= maxBurstSpeedLevel)
-                burstSpeed = maxSpeed + level;
+                burstSpeed = regularMaxSpeed + level;
 
             //Spin timer
             if (spinTimer > 0 && spinning)
@@ -198,8 +202,7 @@ namespace SynesthesiaChaos
                 gravity = regularGravity;
             }
             //Move the player
-            if (!wallSliding)
-                horizontal_movement(level, gesture, numTaps, tapPositionX);
+            horizontal_movement(level, gesture, numTaps, tapPositionX);
             vertical_movement(stages, gesture, numTaps);
 
             //Animate
@@ -209,11 +212,11 @@ namespace SynesthesiaChaos
             animation.Update(gameTime, new Vector2(position.X + spriteWidth, position.Y + spriteHeight));
 
             //Actually do the movement
-            if (!hit_ground(new Vector2((float)(position.X + spriteWidth / 2 + Math.Sign(speedX) * spriteWidth / 2), position.Y + spriteHeight / 2), stages))
+            if (!hit_ground(new Vector2((float)(position.X + spriteWidth / 2 + Math.Sign(speedX) * spriteWidth / 2), position.Y + spriteHeight / 2), stages))//If their next move is not hitting a wall.
             {
-                if (wallSlideTimer <= 0)
+                if (wallSlideTimer <= 0)//Allow them to press the opposite direction of the wall and jump instead of falling off.
                 {
-                    position.X += (float)speedX;//Only move in the X if there is not a wall in your path.
+                    position.X += (float)speedX;//Allow the player to move horizontally.
                     wallSliding = false;
                 }
             }
@@ -241,15 +244,17 @@ namespace SynesthesiaChaos
 
             //Update the keyboard with the new state
             oldstate = Keyboard.GetState();
+            oldX = position.X;
 
         }
         
         public void Draw(SpriteBatch spriteBatch)
         {
-            //spriteBatch.Draw(sprite, position, Color.White);
-            animation.Draw(spriteBatch, directionRight);
+            if(animation == wallslideAnimation)
+                animation.Draw(spriteBatch, movingRight);
+            else
+                animation.Draw(spriteBatch, directionRight);
         }
-
 
 
         //Custom Functions
@@ -268,7 +273,8 @@ namespace SynesthesiaChaos
                 {
                     speedX = maxSpeed;//Make them equal if it is over.
                 }
-                directionRight = true;
+                if(!wallSliding)
+                    directionRight = true;
 
                 //Burst Mode
                 if (speedX == maxSpeed && burstTimer < burstTimerMax)
@@ -279,7 +285,7 @@ namespace SynesthesiaChaos
                 else if (burstTimer >= burstTimerMax)
                 {
                     burstMode = true;
-                    speedX = burstSpeed;
+                    maxSpeed = burstSpeed;
                 }
             }
             else if (Keyboard.GetState().IsKeyDown(Keys.Left) || (tapPositionX < EntireGame.screenWidth / 2 && numTaps >= 1))
@@ -295,7 +301,8 @@ namespace SynesthesiaChaos
                 {
                     speedX = -maxSpeed;//Make them equal if it is over.
                 }
-                directionRight = false;
+                if (!wallSliding)
+                    directionRight = false;
             }
             //If no key is held.
             else if (numTaps == 0 && Keyboard.GetState().IsKeyUp(Keys.Right) && Keyboard.GetState().IsKeyUp(Keys.Left))
@@ -314,11 +321,18 @@ namespace SynesthesiaChaos
                     speedX += accel;
                 }
             }
+            //Calculate th direction moving
+            if (oldX < position.X)
+                movingRight = false;
+            else if (oldX > position.X)
+                movingRight = true;
+
             //Cancel burst speed
-            if (speedX == 0 && !wallSliding)
+            if (speedX < accel && speedX > -accel && !wallSliding)
             {
                 burstMode = false;
                 burstTimer = 0;//Stopping cancels the burst speed.
+                maxSpeed = regularMaxSpeed;
             }
         }
 
@@ -372,7 +386,7 @@ namespace SynesthesiaChaos
                 }
 
                 //Wall Sliding
-                wallSliding = false;
+                wallSliding = false;//If you are standing on the ground, you are not wall sliding.
             }
 
             //Jump

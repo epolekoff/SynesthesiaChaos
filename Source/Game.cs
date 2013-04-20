@@ -50,7 +50,8 @@ namespace SynesthesiaChaos
         int tempScore;
         int score;
         int displayedScore;
-        //String playerName;
+        int burstMultiplier;
+        int burstMultiplierFactor = 2 * 60;//Every x seconds, increase the multiplier by 1.
         int playerHurtTimer;
         int playerHurtTimerMax = 20;//Frames
         Random random;
@@ -92,6 +93,7 @@ namespace SynesthesiaChaos
 
         //Fonts
         SpriteFont scoreFont;
+        SpriteFont multiplierFont;
 
         //Stages
         int levelLength = 10;
@@ -297,6 +299,7 @@ namespace SynesthesiaChaos
 
             //Fonts
             scoreFont = Content.Load<SpriteFont>("fonts/ScoreFont");
+            multiplierFont = Content.Load<SpriteFont>("fonts/MultiplierFont");
 
             //Stages
             stages.AddLast(new Stage(bg[0], cm[0], collisionColorArray.ElementAt(0), -bg[0].Width / 2, 0, graphics.GraphicsDevice));
@@ -452,7 +455,7 @@ namespace SynesthesiaChaos
                         else
                         {
                             fragments.ElementAt(i).deflect();
-                            score += 30;
+                            score += 30 * burstMultiplier;
                         }
                     }
                     //Remove frags that hit the ground or go offscreen.
@@ -478,7 +481,7 @@ namespace SynesthesiaChaos
                 }
 
                 //Paint the ground
-                paint_the_ground();
+                burst();
 
                 //Manage Lives
                 if (lives <= 0)
@@ -599,10 +602,13 @@ namespace SynesthesiaChaos
                     spriteBatch.Draw(heart_sprite, new Vector2(heart_x + i * heart_sprite.Width, heart_y), Color.White);
                 }
 
-                //Draw the Score
+                //Draw the Score + Multiplier
                 spriteBatch.DrawString(scoreFont, "Best: " + ((displayedScore > highscores.score[0]) ? displayedScore : highscores.score[0]) + "\nCurrent: " + displayedScore,
                                         new Vector2(20, 20), Color.Black);
-
+                if (burstMultiplier > 1)
+                {
+                    spriteBatch.DrawString(multiplierFont, "X" + burstMultiplier, new Vector2(250, 20), Movable.get_random_color(random));//CRAZY RANDOM OMG
+                }
                 //Paused
                 if (gameState == PAUSED)
                 {
@@ -618,8 +624,6 @@ namespace SynesthesiaChaos
             else if (gameState == GAMEOVER)
             {
                 spriteBatch.Draw(gameover, new Vector2(0, 0), Color.White);
-                /*spriteBatch.DrawString(scoreFont, "Score: " + displayedScore + "\nBest: " + highScore,
-                                        new Vector2(screenWidth/2 - 100, screenHeight/2 - 20), Color.Black);*/
                 spriteBatch.DrawString(scoreFont, "Score: " + displayedScore, new Vector2(screenWidth / 2 - 100, screenHeight / 3 - 20), Color.Black);
                 for (int i = 0; i < 10; i++)
                 {
@@ -656,9 +660,9 @@ namespace SynesthesiaChaos
             //Increase score based on shift
             tempScore += (int)shift;
 
-            if (tempScore > 35)
+            if (tempScore > 35)//Increase by some amount every X pixels moved.
             {
-                score += (int)(2 * bps);
+                score += (int)((2 * bps) * burstMultiplier); //Base * Multiplier
                 tempScore = 0;
             }
             if (score > displayedScore)
@@ -854,8 +858,12 @@ namespace SynesthesiaChaos
             }
         }
 
-        public void paint_the_ground()
+        public void burst()
         {
+            //Set the multiplier
+            burstMultiplier = 1 + (player.burstDistance / burstMultiplierFactor);
+
+            //Paint the ground behind him
             int trailWidth = 10;
             int trailHeight = 10;
             int randomColor = random.Next();
@@ -863,6 +871,9 @@ namespace SynesthesiaChaos
             //Only paint if he is in burstMode and running.
             if (player.burstMode && level > 0)
             {
+                //Increase the distance bursted
+                player.burstDistance++;
+
                 //Set the color
                 Color[] colorArray = new Color[trailWidth * trailHeight];
                 for (int i = 0; i < colorArray.Length; i++)
@@ -875,10 +886,14 @@ namespace SynesthesiaChaos
                 {
                     if (player.rectangle.Intersects(stages.ElementAt(i).rectangle))
                     {
-                        Rectangle trailRect = new Rectangle((int)(player.position.X - stages.ElementAt(i).position.X), (int)(player.position.Y + player.spriteHeight), trailWidth, trailHeight);
+                        Rectangle trailRect = new Rectangle((int)(player.position.X + player.spriteWidth/2 - trailWidth/2 - stages.ElementAt(i).position.X), (int)(player.position.Y + player.spriteHeight), trailWidth, trailHeight);
                         stages.ElementAt(i).color_map.SetData<Color>(0, trailRect, colorArray, 0, colorArray.Length);
                     }
                 }
+            }
+            else//The player stopped bursting.
+            {
+                player.burstDistance = 0;//Reset the distance.
             }
         }
 
