@@ -25,6 +25,9 @@ namespace SynesthesiaChaos
         public Animation turnAnimation;
         public Animation fallAnimation;
         public Animation spinAnimation;
+        public Animation flyupAnimation;
+        public Animation rollAnimation;
+        public Animation wallslideAnimation;
         bool directionRight= true;
         int animSpeed = 40;
         public Rectangle rectangle;
@@ -35,12 +38,17 @@ namespace SynesthesiaChaos
         public double speedY;
         double accel = 0.45;
         int direction = 1;//This is a positive/negative modifier for acceleration.
-        double gravity = 0.4;
+        double gravity;
+        double regularGravity = 0.4;
         int maxSpeed = 7;
         int jumpHeight = 10;
         int shortHopHeight = 6;
-        int terminalVelocity = 10;
+        int terminalVelocity;
+        int regularTerminalVelocity = 10;
         bool inAir = true;
+        public bool flyUp = false;
+        public bool invincible = false;
+        bool rolling = false;
         public Color[] collisionColor;
 
         //Burst Mode
@@ -55,6 +63,14 @@ namespace SynesthesiaChaos
         int spinTimer = 0;
         int spinTimerMax = 25;
         int hopHeight = 4;
+
+        //Wall Slide
+        bool wallSliding = false;
+        double wallGravity = 0.05;
+        int wallTerminalVelocity = 8;
+        double wallSpeedX = 12;
+        int wallSlideTimer = 0;
+        int wallSlideTimerMax = 15;
 
         //Touch stuff
         int numTaps = 0;
@@ -78,6 +94,9 @@ namespace SynesthesiaChaos
             Texture2D player_turn = Content.Load<Texture2D>("playerturn");
             Texture2D player_fall = Content.Load<Texture2D>("playerfall");
             Texture2D player_spin = Content.Load<Texture2D>("playerspin");
+            Texture2D player_flyup = Content.Load<Texture2D>("playerflyup");
+            Texture2D player_roll = Content.Load<Texture2D>("playerroll");
+            Texture2D player_wallslide = Content.Load<Texture2D>("playerwallslide");
 
             position.X = initial_x;
             position.Y = initial_y;
@@ -96,6 +115,9 @@ namespace SynesthesiaChaos
             turnAnimation = new Animation();
             fallAnimation = new Animation();
             spinAnimation = new Animation();
+            flyupAnimation = new Animation();
+            rollAnimation = new Animation();
+            wallslideAnimation = new Animation();
             animation = new Animation();
             
             idleAnimation.Initialize(player_idle, position, spriteWidth, spriteHeight, 0, 5, animSpeed*2, Color.White, 1, true);
@@ -105,6 +127,9 @@ namespace SynesthesiaChaos
             turnAnimation.Initialize(player_turn, position, spriteWidth, spriteHeight, 0, 0, animSpeed, Color.White, 1, false);
             fallAnimation.Initialize(player_fall, position, spriteWidth, spriteHeight, 0, 1, 3*animSpeed, Color.White, 1, false);
             spinAnimation.Initialize(player_spin, position, spriteWidth, spriteHeight, 0, 6, animSpeed/2, Color.White, 1, true);
+            flyupAnimation.Initialize(player_flyup, position, spriteWidth, spriteHeight, 0, 1, animSpeed, Color.White, 1, true);
+            rollAnimation.Initialize(player_roll, position, spriteWidth, spriteHeight, 0, 11, 2*animSpeed/3, Color.White, 1, false);
+            wallslideAnimation.Initialize(player_wallslide, position, spriteWidth, spriteHeight, 0, 2, animSpeed, Color.White, 1, true);
             animation = idleAnimation;//By default
 
             oldstate = new KeyboardState();
@@ -142,7 +167,7 @@ namespace SynesthesiaChaos
                 }
 
                 //Short hop
-                if (!Keyboard.GetState().IsKeyDown(Keys.Up) && !Keyboard.GetState().IsKeyDown(Keys.Space) && numTaps == 0)
+                if (!Keyboard.GetState().IsKeyDown(Keys.Up) && !Keyboard.GetState().IsKeyDown(Keys.Space) && numTaps == 0 && !flyUp)
                 {
                     if (speedY > shortHopHeight)
                         speedY = shortHopHeight;//If you are not holding the jump button, you jump less.
@@ -158,10 +183,23 @@ namespace SynesthesiaChaos
                 spinTimer--;
             else
                 spinning = false;
-            
 
+            //Wall Slides
+            if (wallSlideTimer > 0)
+                wallSlideTimer--;
+            if (wallSliding && speedY <= 0)
+            {
+                terminalVelocity = wallTerminalVelocity;
+                gravity = wallGravity;
+            }
+            else
+            {
+                terminalVelocity = regularTerminalVelocity;
+                gravity = regularGravity;
+            }
             //Move the player
-            horizontal_movement(level, gesture, numTaps, tapPositionX);
+            if (!wallSliding)
+                horizontal_movement(level, gesture, numTaps, tapPositionX);
             vertical_movement(stages, gesture, numTaps);
 
             //Animate
@@ -173,13 +211,28 @@ namespace SynesthesiaChaos
             //Actually do the movement
             if (!hit_ground(new Vector2((float)(position.X + spriteWidth / 2 + Math.Sign(speedX) * spriteWidth / 2), position.Y + spriteHeight / 2), stages))
             {
-                position.X += (float)speedX;//Only move in the X if there is not a wall in your path.
+                if (wallSlideTimer <= 0)
+                {
+                    position.X += (float)speedX;//Only move in the X if there is not a wall in your path.
+                    wallSliding = false;
+                }
             }
             else
             {
                 speedX = 0;//If you hit a wall, you are no longer moving.
-                burstMode = false;//And burst mode is killed
-                burstTimer = 0;
+
+                //Wall Slide
+                if (inAir)
+                {
+                    wallSliding = true;
+                    wallSlideTimer = wallSlideTimerMax;//Give a little but of time on the wall before falling off.
+                }
+                //You can maintain burst mode by wall sliding.
+                if (!wallSliding)
+                {
+                    burstMode = false;//And burst mode is killed
+                    burstTimer = 0;
+                }
             }
             position.Y -= (float)speedY;
 
@@ -188,6 +241,7 @@ namespace SynesthesiaChaos
 
             //Update the keyboard with the new state
             oldstate = Keyboard.GetState();
+
         }
         
         public void Draw(SpriteBatch spriteBatch)
@@ -227,7 +281,6 @@ namespace SynesthesiaChaos
                     burstMode = true;
                     speedX = burstSpeed;
                 }
-
             }
             else if (Keyboard.GetState().IsKeyDown(Keys.Left) || (tapPositionX < EntireGame.screenWidth / 2 && numTaps >= 1))
             {
@@ -243,10 +296,6 @@ namespace SynesthesiaChaos
                     speedX = -maxSpeed;//Make them equal if it is over.
                 }
                 directionRight = false;
-
-                //Cancel burst speed
-                burstMode = false;
-                burstTimer = 0;//Jumping cancels the burst speed.
             }
             //If no key is held.
             else if (numTaps == 0 && Keyboard.GetState().IsKeyUp(Keys.Right) && Keyboard.GetState().IsKeyUp(Keys.Left))
@@ -264,10 +313,12 @@ namespace SynesthesiaChaos
                 {
                     speedX += accel;
                 }
-
-                //Cancel burst speed
+            }
+            //Cancel burst speed
+            if (speedX == 0 && !wallSliding)
+            {
                 burstMode = false;
-                burstTimer = 0;//Jumping cancels the burst speed.
+                burstTimer = 0;//Stopping cancels the burst speed.
             }
         }
 
@@ -277,12 +328,19 @@ namespace SynesthesiaChaos
             if (inAir)//In the air, fall
             {
                 speedY -= gravity;
+
                 if (speedY < -terminalVelocity){    speedY = -terminalVelocity;  }//Don't fall too fast
 
                 //If you hit your head, stop.
                 if (hit_ground(new Vector2(position.X + spriteWidth / 2, position.Y), stages) && speedY > 0)//Going up and hit ground, stop going up.
                 {
                     speedY = 0;
+                }
+                //Set the rolling variable to roll for when you hit the ground.
+                if (burstMode)
+                {
+                    rolling = true;
+                    rollAnimation.currentFrame = 0;
                 }
             }
             else//If they are on the ground, stop moving.
@@ -296,19 +354,43 @@ namespace SynesthesiaChaos
                         break;
                     }
                 }
+                //Spinning
                 spinning = false;//Stop spinning when you hit the ground.
                 spinTimer = spinTimerMax;
+
+                //Stop flying upward after falling in a pit.
+                if (flyUp == true)
+                {
+                    flyUp = false;
+                    invincible = false;
+                }
+
+                //Stop rolling at the end of the animation.
+                if(rolling && animation.currentFrame == animation.endFrame && animation == rollAnimation)
+                {
+                    rolling = false;
+                }
+
+                //Wall Sliding
+                wallSliding = false;
             }
 
             //Jump
             if (Keyboard.GetState().IsKeyDown(Keys.Space) || Keyboard.GetState().IsKeyDown(Keys.Up) || gesture.GestureType == GestureType.VerticalDrag || numTaps >= 2)
             {
-                if (!inAir)//They can only jump when not in the air.
+                if (!inAir || wallSliding)//They can only jump when not in the air.
                 {
-                    speedY = jumpHeight;
+                    //Only jump if you press the jump button for wall jumps. Holding it is not allowed for wall jumps.
+                    if(!wallSliding || (oldstate.IsKeyUp(Keys.Space) && oldstate.IsKeyUp(Keys.Up)))
+                        speedY = jumpHeight;
+                    if (wallSliding && (oldstate.IsKeyUp(Keys.Space) && oldstate.IsKeyUp(Keys.Up)))
+                    {
+                        speedX -= direction*wallSpeedX;
+                    }
+                    wallSlideTimer = 0;
                 }
                 //Spin
-                if (inAir && !spinning && spinTimer == spinTimerMax && ((Keyboard.GetState().IsKeyDown(Keys.Space) && oldstate.IsKeyUp(Keys.Space)) || (Keyboard.GetState().IsKeyDown(Keys.Up) && oldstate.IsKeyUp(Keys.Up))))
+                if (inAir && !spinning && !wallSliding && spinTimer == spinTimerMax && ((Keyboard.GetState().IsKeyDown(Keys.Space) && oldstate.IsKeyUp(Keys.Space)) || (Keyboard.GetState().IsKeyDown(Keys.Up) && oldstate.IsKeyUp(Keys.Up))))
                 {
                     spinning = true;
                     spinAnimation.currentFrame = 0;
@@ -329,7 +411,10 @@ namespace SynesthesiaChaos
                     }
                     else if (burstMode && level != 0)//Don't start burst mode if you are at level 0.
                     {
-                        animation = sprintAnimation;
+                        if (rolling)
+                            animation = rollAnimation;
+                        else
+                            animation = sprintAnimation;
                     }
                     else
                     {
@@ -346,15 +431,26 @@ namespace SynesthesiaChaos
             {
                 if (speedY > 0)
                 {
-                    animation = jumpAnimation;
+                    if (flyUp)
+                    {
+                        animation = flyupAnimation;
+                    }
+                    else
+                    {
+                        animation = jumpAnimation;
+                    }
                 }
-                else if(!burstMode)
+                else
                 {
                     animation = fallAnimation;
                 }
                 if (spinning)
                 {
                     animation = spinAnimation;
+                }
+                if (wallSliding)
+                {
+                    animation = wallslideAnimation;
                 }
             }
         }

@@ -437,9 +437,9 @@ namespace SynesthesiaChaos
                     //Hit the player
                     if (hit_player)
                     {
-                        if (!player.spinning)
+                        if (!player.spinning && !fragments.ElementAt(i).deflected)
                         {
-                            if (playerHurtTimer <= 0)//Don't let the player get hurt too much.
+                            if (playerHurtTimer <= 0 && !player.invincible)//Don't let the player get hurt too much.
                             {
                                 lives -= 1;
                                 hit.Play();
@@ -451,7 +451,7 @@ namespace SynesthesiaChaos
                         //If the player is spinning
                         else
                         {
-                            fragments.ElementAt(i).speedY = -5;
+                            fragments.ElementAt(i).deflect();
                             score += 30;
                         }
                     }
@@ -492,9 +492,11 @@ namespace SynesthesiaChaos
                 {
                     lives -= 1;
                     hit.Play();
-                    player.position.Y = screenHeight / 3;
-                   
-                    player.speedY = 70;//They don't have momentum built up.
+                    //player.position.Y = screenHeight / 3;
+                    
+                    player.speedY = 20;//Fly upward
+                    player.flyUp = true;
+                    player.invincible = true;
                     player.spinning = false;
                     player.burstMode = false;
                 }

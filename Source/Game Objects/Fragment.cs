@@ -29,6 +29,11 @@ namespace SynesthesiaChaos
         //Collision
         public Rectangle rectangle = new Rectangle();
 
+        //Deflection
+        public bool deflected = false;
+        int deflectedTimer = 0;
+        int deflectedTimerMax = 10;
+
         public Fragment(Vector2 newPosition, GraphicsDevice graphicsDevice, Random random)
         {
 
@@ -57,12 +62,28 @@ namespace SynesthesiaChaos
 
             //Make a rectangle for collisions
             rectangle = new Rectangle((int)position.X, (int)position.Y, width, height);
+
+            //Count down on deflected timer
+            if (deflectedTimer > 0)
+            {
+                deflectedTimer--;
+            }
+            else
+            {
+                deflected = false;
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
             spriteBatch.Draw(rect, position, Color.White);
 
+        }
+        public void deflect()
+        {
+            deflected = true;
+            deflectedTimer = deflectedTimerMax;
+            speedY = -5;
         }
     }
 }
