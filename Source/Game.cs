@@ -493,7 +493,8 @@ namespace SynesthesiaChaos
                     lives -= 1;
                     hit.Play();
                     player.position.Y = screenHeight / 3;
-                    player.speedY = 0;//They don't have momentum built up.
+                   
+                    player.speedY = 70;//They don't have momentum built up.
                     player.spinning = false;
                     player.burstMode = false;
                 }
