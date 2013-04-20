@@ -100,15 +100,10 @@ namespace SynesthesiaChaos
         bool inSafehouse = false;
         int numParallax = 7;
         Vector2[,] parallaxPosition;
-        float[] parallaxFactor = {30f, 7f, 6f, 5f, 4f, 3f, 2f, 1};
+        float[] parallaxFactor = {30f, 7f, 6f, 5f, 4f, 3f, 2f, 0};
 
         //Sound
         WaveManager waveManager = new WaveManager();
-        SoundEffect beat;
-        SoundEffect offbeat;
-        SoundEffect clap;
-        SoundEffect hihat;
-        SoundEffect snare;
         SoundEffect hit;
         SoundEffect ground;
         SoundEffectInstance ground_instance;
@@ -317,11 +312,6 @@ namespace SynesthesiaChaos
             
             //Sound
             waveManager.LoadWave("Content/music.wav", "bgm");
-            beat = Content.Load<SoundEffect>("beat");
-            offbeat = Content.Load<SoundEffect>("offbeat");
-            clap = Content.Load<SoundEffect>("clap");
-            snare = Content.Load<SoundEffect>("snare");
-            hihat = Content.Load<SoundEffect>("hihat");
             hit = Content.Load<SoundEffect>("hit");
             ground = Content.Load<SoundEffect>("ground");
 
@@ -677,14 +667,18 @@ namespace SynesthesiaChaos
                 for (int i = 0; i < 2; i++)//There should only be 2 parallax backgrounds on each layer. Each one needs to be > 1920 in width.
                 {
                     int other = (i == 0) ? 1 : 0;
-                    parallaxPosition[i,j].X -= shift / parallaxFactor[j];
-                    if (parallaxPosition[i,j].X + parallaxImage[j].Width <= 0)
+                    //Allow backgrounds to not move.
+                    if (parallaxFactor[j] != 0)
                     {
-                        parallaxPosition[i,j].X = parallaxPosition[other,j].X + parallaxImage[j].Width - shift;//Move it to the end of the other one.
-                    }
-                    else if (parallaxPosition[i,j].X >= parallaxImage[j].Width)
-                    {
-                        parallaxPosition[i,j].X = parallaxPosition[other,j].X - parallaxImage[j].Width - shift;
+                        parallaxPosition[i, j].X -= shift / parallaxFactor[j];
+                        if (parallaxPosition[i, j].X + parallaxImage[j].Width <= 0)
+                        {
+                            parallaxPosition[i, j].X = parallaxPosition[other, j].X + parallaxImage[j].Width - shift;//Move it to the end of the other one.
+                        }
+                        else if (parallaxPosition[i, j].X >= parallaxImage[j].Width)
+                        {
+                            parallaxPosition[i, j].X = parallaxPosition[other, j].X - parallaxImage[j].Width - shift;
+                        }
                     }
                 }
             }
