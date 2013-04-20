@@ -98,9 +98,9 @@ namespace SynesthesiaChaos
         int numStages = 19;//Number of bgs and cms
         public LinkedList<Stage> stages;
         bool inSafehouse = false;
-        int numParallax = 4;
+        int numParallax = 7;
         Vector2[,] parallaxPosition;
-        float[] parallaxFactor = {4.5f, 3.5f, 2.5f, 1.5f};
+        float[] parallaxFactor = {30f, 7f, 6f, 5f, 4f, 3f, 2f, 1};
 
         //Sound
         WaveManager waveManager = new WaveManager();
@@ -251,9 +251,13 @@ namespace SynesthesiaChaos
             bgx = Content.Load<Texture2D>("background/bgx");
             blocker_bg = Content.Load<Texture2D>("background/blocker_bg");
             parallaxImage[0] = Content.Load<Texture2D>("background/parallax");
-            parallaxImage[1] = Content.Load<Texture2D>("background/parallax2");
-            parallaxImage[2] = Content.Load<Texture2D>("background/parallax3");
+            parallaxImage[1] = Content.Load<Texture2D>("background/parallax1");
+            parallaxImage[2] = Content.Load<Texture2D>("background/parallax2");
+            //parallaxImage[3] = Content.Load<Texture2D>("background/parallax3");
             parallaxImage[3] = Content.Load<Texture2D>("background/parallax4");
+            parallaxImage[4] = Content.Load<Texture2D>("background/parallax5");
+            parallaxImage[5] = Content.Load<Texture2D>("background/parallax6");
+            parallaxImage[6] = Content.Load<Texture2D>("background/parallax7");
             title = Content.Load<Texture2D>("title");
             gameover = Content.Load<Texture2D>("gameover");
             paused = Content.Load<Texture2D>("paused");
