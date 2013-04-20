@@ -78,7 +78,9 @@ namespace SynesthesiaChaos
         Texture2D bgx;
         Texture2D blocker_bg;
         Texture2D[] parallaxImage;
-        Texture2D title;
+        Texture2D mainMenu;
+        Texture2D[] mainMenuLayers;
+        int numMainMenuLayers = 4;
         Texture2D gameover;
         Texture2D paused;
 
@@ -255,7 +257,7 @@ namespace SynesthesiaChaos
             parallaxImage[4] = Content.Load<Texture2D>("background/parallax5");
             parallaxImage[5] = Content.Load<Texture2D>("background/parallax6");
             parallaxImage[6] = Content.Load<Texture2D>("background/parallax7");
-            title = Content.Load<Texture2D>("title");
+            mainMenu = Content.Load<Texture2D>("title");
             gameover = Content.Load<Texture2D>("gameover");
             paused = Content.Load<Texture2D>("paused");
 
@@ -550,7 +552,7 @@ namespace SynesthesiaChaos
             //Call Title
             if (gameState == TITLE)
             {
-                spriteBatch.Draw(title, new Vector2(0, 0), Color.White);
+                spriteBatch.Draw(mainMenu, new Vector2(0, 0), Color.White);
             }
 
             //Call Game
@@ -627,7 +629,7 @@ namespace SynesthesiaChaos
                 spriteBatch.DrawString(scoreFont, "Score: " + displayedScore, new Vector2(screenWidth / 2 - 100, screenHeight / 3 - 20), Color.Black);
                 for (int i = 0; i < 10; i++)
                 {
-                    spriteBatch.DrawString(scoreFont, (i + 1) + ": " + highscores.score[i], new Vector2(screenWidth / 2 - 100, screenHeight / 3 + +20 + 20 * i), Color.Black);
+                    spriteBatch.DrawString(scoreFont, (i + 1) + ": " + highscores.score[i], new Vector2(screenWidth / 2 - 100, screenHeight / 3 + 20 + 30 * i), Color.Black);
                 }
             }
 
@@ -872,7 +874,8 @@ namespace SynesthesiaChaos
             if (player.burstMode && level > 0)
             {
                 //Increase the distance bursted
-                player.burstDistance++;
+                if(player.movingRight)//Can't increase multiplier by stopping or moving left.
+                    player.burstDistance++;
 
                 //Set the color
                 Color[] colorArray = new Color[trailWidth * trailHeight];

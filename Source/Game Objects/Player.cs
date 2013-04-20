@@ -29,7 +29,7 @@ namespace SynesthesiaChaos
         public Animation rollAnimation;
         public Animation wallslideAnimation;
         bool directionRight= true;
-        bool movingRight = true;
+        public bool movingRight = true;
         float oldX;
         int animSpeed = 40;
         public Rectangle rectangle;
@@ -269,12 +269,11 @@ namespace SynesthesiaChaos
                     speedX += accel;
                 }
                 //Account for overshoot
-                if (speedX > maxSpeed && !burstMode)
+                if (speedX > maxSpeed)
                 {
                     speedX = maxSpeed;//Make them equal if it is over.
                 }
-                if(!wallSliding)
-                    directionRight = true;
+                directionRight = true;
 
                 //Burst Mode
                 if (speedX == maxSpeed && burstTimer < burstTimerMax)
@@ -301,8 +300,7 @@ namespace SynesthesiaChaos
                 {
                     speedX = -maxSpeed;//Make them equal if it is over.
                 }
-                if (!wallSliding)
-                    directionRight = false;
+                directionRight = false;
             }
             //If no key is held.
             else if (numTaps == 0 && Keyboard.GetState().IsKeyUp(Keys.Right) && Keyboard.GetState().IsKeyUp(Keys.Left))
