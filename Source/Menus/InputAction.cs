@@ -11,7 +11,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
-namespace GameStateManagement
+namespace SynesthesiaChaos
 {
     /// <summary>
     /// Defines an action that is designated by some set of buttons and/or keys.

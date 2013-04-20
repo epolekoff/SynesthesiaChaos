@@ -19,7 +19,7 @@ using System.IO;
 using System.Xml.Linq;
 #endregion
 
-namespace GameStateManagement
+namespace SynesthesiaChaos
 {
     /// <summary>
     /// The screen manager is a component which manages one or more GameScreen

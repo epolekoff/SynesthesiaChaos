@@ -12,7 +12,7 @@ using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input.Touch;
 
-namespace GameStateManagement
+namespace SynesthesiaChaos
 {
     /// <summary>
     /// Enum describes the screen transition state.

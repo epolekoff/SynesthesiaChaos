@@ -8,9 +8,8 @@
 #endregion
 
 using System;
-using GameStateManagement;
 
-namespace GameStateManagementSample
+namespace SynesthesiaChaos
 {
     /// <summary>
     /// Our game's implementation of IScreenFactory which can handle creating the screens

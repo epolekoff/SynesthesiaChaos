@@ -13,7 +13,7 @@ namespace SynesthesiaChaos
 {
     public class Movable
     {
-        protected int screenWidth =EntireGame.screenWidth;
+        protected int screenWidth = EntireGame.screenWidth;
         protected int screenHeight = EntireGame.screenHeight;
 
         public bool hit_ground(Vector2 position, LinkedList<Stage> stages)
