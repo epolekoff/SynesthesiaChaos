@@ -32,7 +32,7 @@ namespace SynesthesiaChaos
     public class EntireGame : Microsoft.Xna.Framework.Game
     {
         //Constants
-        const int TITLE = 0;
+        const int MAINMENU = 0;
         const int GAME = 1;
         const int GAMEOVER = 2;
         const int PAUSED = 3;
@@ -51,7 +51,7 @@ namespace SynesthesiaChaos
         int score;
         int displayedScore;
         int burstMultiplier;
-        int burstMultiplierFactor = 2 * 60;//Every x seconds, increase the multiplier by 1.
+        int burstMultiplierFactor = 3 * 60;//Every x seconds, increase the multiplier by 1.
         int playerHurtTimer;
         int playerHurtTimerMax = 20;//Frames
         Random random;
@@ -64,7 +64,7 @@ namespace SynesthesiaChaos
         int heart_y = screenHeight - 65;
 
         //Create the Game States
-        public int gameState = TITLE;
+        public int gameState = MAINMENU;
 
 
         //Textures
@@ -78,9 +78,13 @@ namespace SynesthesiaChaos
         Texture2D bgx;
         Texture2D blocker_bg;
         Texture2D[] parallaxImage;
-        Texture2D mainMenu;
         Texture2D[] mainMenuLayers;
-        int numMainMenuLayers = 4;
+        int[] mainMenuUnlockScores = {1000, 3000, 5000, 10000, 15000, 20000, 30000};
+        int numMainMenuLayers = 8;
+        int mainMenuUnlockCount = 0;
+        Texture2D mainMenuLogo;
+        Texture2D playBG;
+        Texture2D playButton;
         Texture2D gameover;
         Texture2D paused;
 
@@ -102,9 +106,13 @@ namespace SynesthesiaChaos
         int numStages = 19;//Number of bgs and cms
         public LinkedList<Stage> stages;
         bool inSafehouse = false;
-        int numParallax = 7;
+        int numParallax = 6;
         Vector2[,] parallaxPosition;
-        float[] parallaxFactor = {30f, 7f, 6f, 5f, 4f, 3f, 2f, 0};
+        float[] parallaxFactor = {7f, 6f, 5f, 4f, 3f, 2f, 0};
+
+        //Collectibles
+        LinkedList<Collectible> collectibles;
+        Texture2D heartToken;
 
         //Sound
         WaveManager waveManager = new WaveManager();
@@ -186,7 +194,8 @@ namespace SynesthesiaChaos
             cm = new Texture2D[numStages];
             collisionColorArray = new LinkedList<Color[]>();
 
-            //Sounds
+            //Collectibles
+            collectibles = new LinkedList<Collectible>();
 
             //Fragments
             fragments = new LinkedList<Fragment>();
@@ -250,14 +259,27 @@ namespace SynesthesiaChaos
             bgx = Content.Load<Texture2D>("background/bgx");
             blocker_bg = Content.Load<Texture2D>("background/blocker_bg");
             parallaxImage[0] = Content.Load<Texture2D>("background/parallax");
-            parallaxImage[1] = Content.Load<Texture2D>("background/parallax1");
-            parallaxImage[2] = Content.Load<Texture2D>("background/parallax2");
-            //parallaxImage[3] = Content.Load<Texture2D>("background/parallax3");
-            parallaxImage[3] = Content.Load<Texture2D>("background/parallax4");
-            parallaxImage[4] = Content.Load<Texture2D>("background/parallax5");
-            parallaxImage[5] = Content.Load<Texture2D>("background/parallax6");
-            parallaxImage[6] = Content.Load<Texture2D>("background/parallax7");
-            mainMenu = Content.Load<Texture2D>("title");
+            //parallaxImage[0] = Content.Load<Texture2D>("background/parallax1");//Moon
+            parallaxImage[1] = Content.Load<Texture2D>("background/parallax2");
+            //parallaxImage[3] = Content.Load<Texture2D>("background/parallax3");//Smoke
+            parallaxImage[2] = Content.Load<Texture2D>("background/parallax4");
+            parallaxImage[3] = Content.Load<Texture2D>("background/parallax5");
+            parallaxImage[4] = Content.Load<Texture2D>("background/parallax6");
+            parallaxImage[5] = Content.Load<Texture2D>("background/parallax7");
+            
+            //Menus
+            mainMenuLayers = new Texture2D[numMainMenuLayers];
+            mainMenuLayers[0] = Content.Load<Texture2D>("background/mainmenu/MainMenu0");
+            mainMenuLayers[1] = Content.Load<Texture2D>("background/mainmenu/MainMenu1");
+            mainMenuLayers[2] = Content.Load<Texture2D>("background/mainmenu/MainMenu2");
+            mainMenuLayers[3] = Content.Load<Texture2D>("background/mainmenu/MainMenu3");
+            mainMenuLayers[4] = Content.Load<Texture2D>("background/mainmenu/MainMenu4");
+            mainMenuLayers[5] = Content.Load<Texture2D>("background/mainmenu/MainMenu5");
+            mainMenuLayers[6] = Content.Load<Texture2D>("background/mainmenu/MainMenu6");
+            mainMenuLayers[7] = Content.Load<Texture2D>("background/mainmenu/MainMenu7");
+            mainMenuLogo = Content.Load<Texture2D>("background/mainmenu/MainMenuLogo");
+            playBG = Content.Load<Texture2D>("background/mainmenu/PlayBG");
+            playButton = Content.Load<Texture2D>("background/mainmenu/PlayButton");
             gameover = Content.Load<Texture2D>("gameover");
             paused = Content.Load<Texture2D>("paused");
 
@@ -304,8 +326,11 @@ namespace SynesthesiaChaos
             multiplierFont = Content.Load<SpriteFont>("fonts/MultiplierFont");
 
             //Stages
-            stages.AddLast(new Stage(bg[0], cm[0], collisionColorArray.ElementAt(0), -bg[0].Width / 2, 0, graphics.GraphicsDevice));
-            stages.AddLast(new Stage(bg[1], cm[1], collisionColorArray.ElementAt(1), stages.ElementAt(0).position.X + stages.ElementAt(0).width, 0, graphics.GraphicsDevice));
+            stages.AddLast(new Stage(0, bg[0], cm[0], collisionColorArray.ElementAt(0), -bg[0].Width / 2, 0, graphics.GraphicsDevice));
+            stages.AddLast(new Stage(1, bg[1], cm[1], collisionColorArray.ElementAt(1), stages.ElementAt(0).position.X + stages.ElementAt(0).width, 0, graphics.GraphicsDevice));
+
+            //Collectibles
+            heartToken = Content.Load<Texture2D>("collectibles/hearttoken");
 
             //Score
             if (!dataLoaded)
@@ -347,7 +372,7 @@ namespace SynesthesiaChaos
             {
                 if (gameState == PAUSED || gameState == GAMEOVER)
                 {
-                    gameState = TITLE;
+                    gameState = MAINMENU;
                     waveManager.StopSong();
                 }
             }
@@ -397,9 +422,19 @@ namespace SynesthesiaChaos
                 //save_data();
             }
 
-            //Title
-            if (gameState == TITLE)
+            //Menu
+            if (gameState == MAINMENU)
             {
+                //Menu Unlocks
+                mainMenuUnlockCount = 0;
+                for (int i = 0; i < mainMenuUnlockScores.Length; i++)
+                {
+                    if (highscores.score[0] > mainMenuUnlockScores[i])
+                    {
+                        mainMenuUnlockCount++;
+                    }
+                }
+
                 if (Keyboard.GetState().IsKeyDown(Keys.Enter) || gesture.GestureType == GestureType.Tap)
                 {
                     gameState = GAME;
@@ -482,8 +517,23 @@ namespace SynesthesiaChaos
                     }
                 }
 
-                //Paint the ground
+                //Manage burst mode
                 burst();
+
+                //Collectibles
+                for (int i = 0; i < collectibles.Count(); i++)
+                {
+                    //Pick up the collectible
+                    if (player.rectangle.Intersects(collectibles.ElementAt(i).rectangle))
+                    {
+                        lives++;
+                        collectibles.Remove(collectibles.ElementAt(i));
+                    }
+                    else
+                    {
+                        collectibles.ElementAt(i).Update(gameTime);
+                    }
+                }
 
                 //Manage Lives
                 if (lives <= 0)
@@ -550,9 +600,14 @@ namespace SynesthesiaChaos
             spriteBatch.Begin(SpriteSortMode.Deferred, null, null, null, null, null, cameraView.GetViewMatrix());
 
             //Call Title
-            if (gameState == TITLE)
+            if (gameState == MAINMENU)
             {
-                spriteBatch.Draw(mainMenu, new Vector2(0, 0), Color.White);
+                spriteBatch.Draw(mainMenuLayers[numMainMenuLayers-1], new Vector2(0, 0), Color.White);
+                for (int i = mainMenuUnlockCount-1; i >= 0; i--)
+                {
+                    spriteBatch.Draw(mainMenuLayers[i], new Vector2(0, 0), Color.White);
+                }
+                spriteBatch.Draw(mainMenuLogo, new Vector2(0, 0), Color.White);
             }
 
             //Call Game
@@ -589,6 +644,12 @@ namespace SynesthesiaChaos
                 {
                     fragments.ElementAt(i).Draw(spriteBatch);
                 }
+                //Draw the collectibles
+                for (int i = 0; i < collectibles.Count(); i++)
+                {
+                    //spriteBatch.Draw(collectibles.ElementAt(i).texture, collectibles.ElementAt(i).position, Color.White);
+                    collectibles.ElementAt(i).Draw(spriteBatch);
+                }
 
                 //Draw the player
                 player.Draw(spriteBatch);
@@ -609,7 +670,7 @@ namespace SynesthesiaChaos
                                         new Vector2(20, 20), Color.Black);
                 if (burstMultiplier > 1)
                 {
-                    spriteBatch.DrawString(multiplierFont, "X" + burstMultiplier, new Vector2(250, 20), Movable.get_random_color(random));//CRAZY RANDOM OMG
+                    spriteBatch.DrawString(multiplierFont, "X" + burstMultiplier, new Vector2(player.position.X, player.position.Y - 30), Movable.get_random_color(random));//CRAZY RANDOM OMG
                 }
                 //Paused
                 if (gameState == PAUSED)
@@ -658,6 +719,16 @@ namespace SynesthesiaChaos
             {
                 fragments.ElementAt(i).position.X -= shift;
             }
+            //Move the collectibles
+            for (int i = 0; i < collectibles.Count(); i++)
+            {
+                collectibles.ElementAt(i).position.X -= shift;
+            }
+            //Move the jump puffs in the player.
+            for (int i = 0; i < player.poofs.Count(); i++)
+            {
+                player.poofs.ElementAt(i).position.X -= shift;
+            }
 
             //Increase score based on shift
             tempScore += (int)shift;
@@ -702,18 +773,25 @@ namespace SynesthesiaChaos
                 if (stages.Count() < levelLength - 1)
                 {
                     stages.AddLast(random_stage(new Vector2(stages.Last().position.X + stages.Last().width - 20, 0)));
+                    //Spawn a collectible
+                    if (random.Next(0, 2) == 0)
+                    {
+                        collectibles.AddLast(new Collectible(new Vector2(stages.Last().collectiblePositions[random.Next(0, stages.Last().numPositions)].X + stages.Last().position.X, 
+                                                                        stages.Last().collectiblePositions[random.Next(0, stages.Last().numPositions)].Y), 
+                                                                        random.Next(0, 1), heartToken));
+                    }
                 }
                 //The one before the final stage is always bg1
                 else if (stages.Count() == levelLength - 1)
                 {
-                    stages.AddLast(new Stage(bg[1], cm[1], collisionColorArray.ElementAt(1), stages.Last().position.X + stages.Last().width - 20, 0, graphics.GraphicsDevice));
+                    stages.AddLast(new Stage(1, bg[1], cm[1], collisionColorArray.ElementAt(1), stages.Last().position.X + stages.Last().width - 20, 0, graphics.GraphicsDevice));
                 }
                 //The safehouse
                 else if (stages.Count() == levelLength)
                 {
-                    stages.AddLast(new Stage(bgx, cmx, collisionColorArray.ElementAt(collisionColorArray.Count() - 2), stages.Last().position.X + stages.Last().width - 20, 0, graphics.GraphicsDevice));
+                    stages.AddLast(new Stage(-1, bgx, cmx, collisionColorArray.ElementAt(collisionColorArray.Count() - 2), stages.Last().position.X + stages.Last().width - 20, 0, graphics.GraphicsDevice));
                     stages.Last().safehouse = true;
-                    stages.AddLast(new Stage(bg[1], cm[1], collisionColorArray.ElementAt(1), stages.Last().position.X + stages.Last().width - 20, 0, graphics.GraphicsDevice));//The one after a safehouse is flat.
+                    stages.AddLast(new Stage(1, bg[1], cm[1], collisionColorArray.ElementAt(1), stages.Last().position.X + stages.Last().width - 20, 0, graphics.GraphicsDevice));//The one after a safehouse is flat.
                 }
                 else if (stages.Count() >= levelLength && stages.ElementAt(stages.Count() - 2).position.X < (screenWidth / 2 - stages.ElementAt(stages.Count() - 2).width / 4))
                 {
@@ -722,10 +800,11 @@ namespace SynesthesiaChaos
                     Stage tempSafehouse = stages.ElementAt(levelLength);
                     Stage temp1 = stages.ElementAt(levelLength + 1);
                     stages.Clear();
+                    collectibles.Clear();
 
                     //Add the 2 new ones
                     stages.AddLast(temp0);
-                    stages.AddLast(new Stage(blocker_bg, blocker_cm, collisionColorArray.Last(), tempSafehouse.position.X, 0, graphics.GraphicsDevice));
+                    stages.AddLast(new Stage(-1, blocker_bg, blocker_cm, collisionColorArray.Last(), tempSafehouse.position.X, 0, graphics.GraphicsDevice));
                     //Let it keep the same color to look cool.
                     stages.Last().color_map = tempSafehouse.color_map;
                     stages.Last().safehouse = true;
@@ -748,7 +827,7 @@ namespace SynesthesiaChaos
             int r;
             r = random.Next(1, numStages);
 
-            return new Stage(bg[r], cm[r], collisionColorArray.ElementAt(r), position.X, position.Y, graphics.GraphicsDevice);
+            return new Stage(r, bg[r], cm[r], collisionColorArray.ElementAt(r), position.X, position.Y, graphics.GraphicsDevice);
         }
 
         public void beat_timer(GameTime gameTime)
@@ -766,35 +845,17 @@ namespace SynesthesiaChaos
                 SoundEffect.MasterVolume = 1f;
             }
 
-
-            //Do stuff based on the FPS timer
-            if ((fpsTimer >= 15 && fpsTimer <= 15 + bps) ||//Try to get it in the range.
-                (fpsTimer >= 45 && fpsTimer <= 45 + bps))
-            {
-                // if (level >= 3)
-                //hihat.Play();
-            }
-            if (fpsTimer >= 30 && fpsTimer <= 30 + bps)//Try to get it in the range.
-            {
-                //if (level >= 1)
-                // offbeat.Play();
-                //if (level >= 3)
-                // hihat.Play();
-            }
-            else if (fpsTimer >= 60)//On beat. Launch the firework and play the beat.
+            //On beat. Launch the firework.
+            if (fpsTimer >= 60)
             {
 
                 fpsTimer = 0;//Reset the timer.
-
-                //Play the beat
-                //beat.Play();
 
                 if (level >= 2)
                 {
                     clapCount++;
                     if (clapCount > 1)
                     {
-                        //   clap.Play();
                         clapCount = 0;
                     }
                 }
@@ -869,7 +930,7 @@ namespace SynesthesiaChaos
             int trailWidth = 10;
             int trailHeight = 10;
             int randomColor = random.Next();
-            Color trailBlockColor = Movable.get_random_color(random); ;
+            Color trailBlockColor = Movable.get_random_color(random);
             //Only paint if he is in burstMode and running.
             if (player.burstMode && level > 0)
             {

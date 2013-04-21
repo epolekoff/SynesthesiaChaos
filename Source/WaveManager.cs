@@ -14,7 +14,6 @@ namespace SynesthesiaChaos
         private List<Wave> waves = new List<Wave>();
         private SourceVoice voice;
         private Wave firstWave;
-        AudioBufferAndMetaData buffer;
 
         public WaveManager()
         {

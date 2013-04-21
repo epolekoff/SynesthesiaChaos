@@ -34,6 +34,10 @@ namespace SynesthesiaChaos
         int animSpeed = 40;
         public Rectangle rectangle;
 
+        //Poofs
+        public LinkedList<JumpPoof> poofs;
+        Texture2D jump_poof;
+
         //Physics Stuff
         public Vector2 position;
         double speedX;
@@ -101,6 +105,10 @@ namespace SynesthesiaChaos
             Texture2D player_flyup = Content.Load<Texture2D>("playerflyup");
             Texture2D player_roll = Content.Load<Texture2D>("playerroll");
             Texture2D player_wallslide = Content.Load<Texture2D>("playerwallslide");
+            jump_poof = Content.Load<Texture2D>("jumppoof");
+
+            //Jump Poofs
+            poofs = new LinkedList<JumpPoof>();
 
             position.X = initial_x;
             position.Y = initial_y;
@@ -201,6 +209,20 @@ namespace SynesthesiaChaos
                 terminalVelocity = regularTerminalVelocity;
                 gravity = regularGravity;
             }
+
+            //Jump Poofs
+            for(int i = 0; i < poofs.Count(); i ++)
+            {
+                if (poofs.ElementAt(i).anim.currentFrame == poofs.ElementAt(i).anim.endFrame)
+                {
+                    poofs.Remove(poofs.ElementAt(i));
+                }
+                else
+                {
+                    poofs.ElementAt(i).Update(gameTime);
+                }
+            }
+
             //Move the player
             horizontal_movement(level, gesture, numTaps, tapPositionX);
             vertical_movement(stages, gesture, numTaps);
@@ -254,6 +276,12 @@ namespace SynesthesiaChaos
                 animation.Draw(spriteBatch, movingRight);
             else
                 animation.Draw(spriteBatch, directionRight);
+
+            //Draw jump poofs
+            for (int i = 0; i < poofs.Count(); i++)
+            {
+                poofs.ElementAt(i).Draw(spriteBatch);
+            }
         }
 
 
@@ -400,6 +428,12 @@ namespace SynesthesiaChaos
                         speedX -= direction*wallSpeedX;
                     }
                     wallSlideTimer = 0;
+
+                    //Jump Poof
+                    if (!inAir)
+                    {
+                        poofs.AddFirst(new JumpPoof(new Vector2(position.X + spriteWidth, position.Y + spriteHeight), jump_poof));
+                    }
                 }
                 //Spin
                 if (inAir && !spinning && !wallSliding && spinTimer == spinTimerMax && ((Keyboard.GetState().IsKeyDown(Keys.Space) && oldstate.IsKeyUp(Keys.Space)) || (Keyboard.GetState().IsKeyDown(Keys.Up) && oldstate.IsKeyUp(Keys.Up))))

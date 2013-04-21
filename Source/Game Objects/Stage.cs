@@ -13,6 +13,7 @@ namespace SynesthesiaChaos
 {
     public class Stage
     {
+        int number;
         public Vector2 position;
         public Texture2D bg;
         public Texture2D cm;
@@ -23,8 +24,14 @@ namespace SynesthesiaChaos
         public int width;
         public int height;
 
-        public Stage(Texture2D background, Texture2D collision, Color[] collisionColor, float x, float y, GraphicsDevice graphicsDevice)
+        //Collectibles
+        public Vector2[] collectiblePositions;
+        public int numPositions;
+
+        public Stage(int number, Texture2D background, Texture2D collision, Color[] collisionColor, float x, float y, GraphicsDevice graphicsDevice)
         {
+            this.number = number;
+
             bg = background;
             cm = collision;
 
@@ -39,6 +46,24 @@ namespace SynesthesiaChaos
 
             //Take the passed in value.
             this.collisionColor = collisionColor;
+
+            //Set the collectible positions based on what stage this is.
+            collectiblePositions = new Vector2[2];
+            numPositions = 2;
+            if (number % 2 == 0)
+            {
+                collectiblePositions[0].X = 1000;
+                collectiblePositions[0].Y = 500;
+                collectiblePositions[1].X = 700;
+                collectiblePositions[1].Y = 400;
+            }
+            else if (number % 2 == 1)
+            {
+                collectiblePositions[0].X = 10;
+                collectiblePositions[0].Y = 10;
+                collectiblePositions[1].X = 800;
+                collectiblePositions[1].Y = 800;
+            }
         }
     }
 }
