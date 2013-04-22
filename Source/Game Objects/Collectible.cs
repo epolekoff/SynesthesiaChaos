@@ -20,8 +20,8 @@ namespace SynesthesiaChaos
         public int type;
         public Texture2D texture;
         public Animation animation;
-        public int spriteHeight = 25;
-        public int spriteWidth = 25;
+        public int spriteHeight = 35;
+        public int spriteWidth = 35;
         public Rectangle rectangle;
 
         public Collectible(Vector2 position, int type, Texture2D texture)
@@ -30,7 +30,7 @@ namespace SynesthesiaChaos
             this.type = type;
             this.texture = texture;
             animation = new Animation();
-            animation.Initialize(texture, position, spriteWidth, spriteHeight, 0, 3, 40, Color.White, 1, true);
+            animation.Initialize(texture, position, spriteWidth, spriteHeight, 0, 3, 80, Color.White, 1, true);
 
             rectangle = new Rectangle((int)position.X, (int)position.Y, spriteWidth, spriteHeight);
         }
@@ -43,7 +43,7 @@ namespace SynesthesiaChaos
         public void Update(GameTime gameTime)
         {
             animation.Update(gameTime, position);
-            rectangle = new Rectangle((int)position.X, (int)position.Y, spriteWidth, spriteHeight);
+            rectangle = new Rectangle((int)position.X - spriteWidth, (int)position.Y - spriteHeight, spriteWidth, spriteHeight);
         }
 
     }

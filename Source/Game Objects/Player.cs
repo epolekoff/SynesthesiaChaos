@@ -38,6 +38,11 @@ namespace SynesthesiaChaos
         public LinkedList<JumpPoof> poofs;
         Texture2D jump_poof;
 
+        //Sounds
+        SoundEffect jumpSound;
+        SoundEffect landSound;
+        SoundEffect spinSound;
+
         //Physics Stuff
         public Vector2 position;
         double speedX;
@@ -81,8 +86,9 @@ namespace SynesthesiaChaos
         int wallSlideTimerMax = 15;
 
         //Touch stuff
-        int numTaps = 0;
-        float tapPositionX;
+        public bool touchingRight;
+        public bool touchingLeft;
+        public bool touchingJump;
 
         KeyboardState oldstate;
 
@@ -106,6 +112,11 @@ namespace SynesthesiaChaos
             Texture2D player_roll = Content.Load<Texture2D>("playerroll");
             Texture2D player_wallslide = Content.Load<Texture2D>("playerwallslide");
             jump_poof = Content.Load<Texture2D>("jumppoof");
+
+            //Load Sounds
+            jumpSound = Content.Load<SoundEffect>("sounds/Jump");
+            landSound = Content.Load<SoundEffect>("sounds/Landing");
+            spinSound = Content.Load<SoundEffect>("sounds/Spin");
 
             //Jump Poofs
             poofs = new LinkedList<JumpPoof>();
@@ -147,22 +158,8 @@ namespace SynesthesiaChaos
             oldstate = new KeyboardState();
         }
 
-        public void Update(LinkedList<Stage> stages, GameTime gameTime,int level, GestureSample gesture)
+        public void Update(LinkedList<Stage> stages, GameTime gameTime,int level)
         {
-            TouchPanelCapabilities tc = TouchPanel.GetCapabilities();//Determine if there is a touch panel connected or not.
-               
-            numTaps = 0;//The number of fingers on the screen.
-            TouchCollection touchCollection = TouchPanel.GetState();
-            foreach (TouchLocation tl in touchCollection)
-            {
-                if ((tl.State == TouchLocationState.Pressed)
-                        || (tl.State == TouchLocationState.Moved))
-                {
-                    numTaps++;//All of this to get the number of fingers on the screen and each one's position.
-                    tapPositionX = tl.Position.X;
-                }
-            }
-
             //Ground Collision
             if (hit_ground(new Vector2(position.X + spriteWidth / 2, position.Y + spriteHeight), stages))
             {
@@ -174,12 +171,11 @@ namespace SynesthesiaChaos
                 //If you are not already in burst mode, falling removes burst mode.
                 if (!burstMode)
                 {
-                    burstMode = false;
                     burstTimer = 0;
                 }
 
                 //Short hop
-                if (!Keyboard.GetState().IsKeyDown(Keys.Up) && !Keyboard.GetState().IsKeyDown(Keys.Space) && numTaps == 0 && !flyUp)
+                if (!Keyboard.GetState().IsKeyDown(Keys.Up) && !Keyboard.GetState().IsKeyDown(Keys.Space) && !touchingJump && !flyUp)
                 {
                     if (speedY > shortHopHeight)
                         speedY = shortHopHeight;//If you are not holding the jump button, you jump less.
@@ -189,6 +185,8 @@ namespace SynesthesiaChaos
             //Set the burst speed.
             if (level <= maxBurstSpeedLevel)
                 burstSpeed = regularMaxSpeed + level;
+            if(!burstMode)//Reset the speed when you lose burst mode.
+                maxSpeed = regularMaxSpeed;
 
             //Spin timer
             if (spinTimer > 0 && spinning)
@@ -224,8 +222,8 @@ namespace SynesthesiaChaos
             }
 
             //Move the player
-            horizontal_movement(level, gesture, numTaps, tapPositionX);
-            vertical_movement(stages, gesture, numTaps);
+            horizontal_movement(level);
+            vertical_movement(stages);
 
             //Animate
             //Which animation do you play?
@@ -286,14 +284,13 @@ namespace SynesthesiaChaos
 
 
         //Custom Functions
-        void horizontal_movement(int level, GestureSample gesture, int numTaps, float tapPositionX)
+        void horizontal_movement(int level)
         {
-            if (Keyboard.GetState().IsKeyDown(Keys.Right) || (tapPositionX > EntireGame.screenWidth / 2 && numTaps >= 1))
+            if (Keyboard.GetState().IsKeyDown(Keys.Right) || (touchingRight))
             {
                 //Accelerate
                 if (speedX < maxSpeed)
                 {
-                    direction = 1;
                     speedX += accel;
                 }
                 //Account for overshoot
@@ -301,6 +298,7 @@ namespace SynesthesiaChaos
                 {
                     speedX = maxSpeed;//Make them equal if it is over.
                 }
+                direction = 1;
                 directionRight = true;
 
                 //Burst Mode
@@ -315,12 +313,11 @@ namespace SynesthesiaChaos
                     maxSpeed = burstSpeed;
                 }
             }
-            else if (Keyboard.GetState().IsKeyDown(Keys.Left) || (tapPositionX < EntireGame.screenWidth / 2 && numTaps >= 1))
+            else if (Keyboard.GetState().IsKeyDown(Keys.Left) || (touchingLeft))
             {
                 //Accelerate
                 if (speedX > -maxSpeed)
                 {
-                    direction = -1;
                     speedX += accel*direction;
                 }
                 //Account for overshoot
@@ -328,10 +325,12 @@ namespace SynesthesiaChaos
                 {
                     speedX = -maxSpeed;//Make them equal if it is over.
                 }
+
+                direction = -1;
                 directionRight = false;
             }
             //If no key is held.
-            else if (numTaps == 0 && Keyboard.GetState().IsKeyUp(Keys.Right) && Keyboard.GetState().IsKeyUp(Keys.Left))
+            else if (!touchingRight && !touchingLeft && Keyboard.GetState().IsKeyUp(Keys.Right) && Keyboard.GetState().IsKeyUp(Keys.Left))
             {
                 if (speedX < accel && speedX > -accel)
                 {
@@ -358,11 +357,10 @@ namespace SynesthesiaChaos
             {
                 burstMode = false;
                 burstTimer = 0;//Stopping cancels the burst speed.
-                maxSpeed = regularMaxSpeed;
             }
         }
 
-        void vertical_movement(LinkedList<Stage> stages, GestureSample gesture, int numTaps)
+        void vertical_movement(LinkedList<Stage> stages)
         {
             //Fall
             if (inAir)//In the air, fall
@@ -416,13 +414,16 @@ namespace SynesthesiaChaos
             }
 
             //Jump
-            if (Keyboard.GetState().IsKeyDown(Keys.Space) || Keyboard.GetState().IsKeyDown(Keys.Up) || gesture.GestureType == GestureType.VerticalDrag || numTaps >= 2)
+            if (Keyboard.GetState().IsKeyDown(Keys.Space) || Keyboard.GetState().IsKeyDown(Keys.Up) || touchingJump)
             {
                 if (!inAir || wallSliding)//They can only jump when not in the air.
                 {
                     //Only jump if you press the jump button for wall jumps. Holding it is not allowed for wall jumps.
-                    if(!wallSliding || (oldstate.IsKeyUp(Keys.Space) && oldstate.IsKeyUp(Keys.Up)))
+                    if (!wallSliding || (oldstate.IsKeyUp(Keys.Space) && oldstate.IsKeyUp(Keys.Up)))
+                    {
                         speedY = jumpHeight;
+                        jumpSound.Play();
+                    }
                     if (wallSliding && (oldstate.IsKeyUp(Keys.Space) && oldstate.IsKeyUp(Keys.Up)))
                     {
                         speedX -= direction*wallSpeedX;
@@ -430,10 +431,11 @@ namespace SynesthesiaChaos
                     wallSlideTimer = 0;
 
                     //Jump Poof
-                    if (!inAir)
+                    if (!inAir)//aka, not wall sliding
                     {
                         poofs.AddFirst(new JumpPoof(new Vector2(position.X + spriteWidth, position.Y + spriteHeight), jump_poof));
                     }
+                    
                 }
                 //Spin
                 if (inAir && !spinning && !wallSliding && spinTimer == spinTimerMax && ((Keyboard.GetState().IsKeyDown(Keys.Space) && oldstate.IsKeyUp(Keys.Space)) || (Keyboard.GetState().IsKeyDown(Keys.Up) && oldstate.IsKeyUp(Keys.Up))))
@@ -441,6 +443,7 @@ namespace SynesthesiaChaos
                     spinning = true;
                     spinAnimation.currentFrame = 0;
                     speedY += hopHeight;
+                    spinSound.Play();
                 }
             }
         }

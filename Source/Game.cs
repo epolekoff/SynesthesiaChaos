@@ -33,9 +33,10 @@ namespace SynesthesiaChaos
     {
         //Constants
         const int MAINMENU = 0;
-        const int GAME = 1;
-        const int GAMEOVER = 2;
-        const int PAUSED = 3;
+        const int INSTRUCTIONS = 1;
+        const int GAME = 2;
+        const int GAMEOVER = 3;
+        const int PAUSED = 4;
 
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
@@ -78,8 +79,9 @@ namespace SynesthesiaChaos
         Texture2D bgx;
         Texture2D blocker_bg;
         Texture2D[] parallaxImage;
+        Texture2D gradientOveraly;
         Texture2D[] mainMenuLayers;
-        int[] mainMenuUnlockScores = {1000, 3000, 5000, 10000, 15000, 20000, 30000};
+        int[] mainMenuUnlockScores = {1, 800, 3000, 5000, 10000, 20000, 30000};
         int numMainMenuLayers = 8;
         int mainMenuUnlockCount = 0;
         Texture2D mainMenuLogo;
@@ -87,6 +89,18 @@ namespace SynesthesiaChaos
         Texture2D playButton;
         Texture2D gameover;
         Texture2D paused;
+        Texture2D instructions;
+
+        //Touch Controls
+        Texture2D rightButton;
+        Texture2D leftButton;
+        Texture2D jumpButton;
+        bool displayTouchControls = true;
+        int tapTimer;
+        int tapTimerMax = 5 * 60;
+        Vector2 rightButtonPosition;
+        Vector2 leftButtonPosition;
+        Vector2 jumpButtonPosition;
 
         //Collisions
         Texture2D[] cm;
@@ -103,22 +117,28 @@ namespace SynesthesiaChaos
 
         //Stages
         int levelLength = 10;
-        int numStages = 19;//Number of bgs and cms
+        int numStages = 21;//Number of bgs and cms (include bg0)
         public LinkedList<Stage> stages;
         bool inSafehouse = false;
-        int numParallax = 6;
+        int numParallax = 5;
         Vector2[,] parallaxPosition;
-        float[] parallaxFactor = {7f, 6f, 5f, 4f, 3f, 2f, 0};
+        float[] parallaxFactor = {7f, 6f, 5f, 4f, 3f, 2f};
 
         //Collectibles
         LinkedList<Collectible> collectibles;
         Texture2D heartToken;
+        Texture2D burstToken;
+        Texture2D pointToken;
 
         //Sound
         WaveManager waveManager = new WaveManager();
-        SoundEffect hit;
-        SoundEffect ground;
+        SoundEffect hitSound;
+        SoundEffect groundSound;
         SoundEffectInstance ground_instance;
+        SoundEffect deflectSound;
+        SoundEffectInstance deflect_instance;
+        SoundEffect collectSound;
+        SoundEffect fallOffEdgeSound;
         double bps;
         double fpsTimer = 0;
         int clapCount;
@@ -256,6 +276,8 @@ namespace SynesthesiaChaos
             bg[16] = Content.Load<Texture2D>("background/bg16");
             bg[17] = Content.Load<Texture2D>("background/bg17");
             bg[18] = Content.Load<Texture2D>("background/bg18");
+            bg[19] = Content.Load<Texture2D>("background/bg19");
+            bg[20] = Content.Load<Texture2D>("background/bg20");
             bgx = Content.Load<Texture2D>("background/bgx");
             blocker_bg = Content.Load<Texture2D>("background/blocker_bg");
             parallaxImage[0] = Content.Load<Texture2D>("background/parallax");
@@ -265,7 +287,8 @@ namespace SynesthesiaChaos
             parallaxImage[2] = Content.Load<Texture2D>("background/parallax4");
             parallaxImage[3] = Content.Load<Texture2D>("background/parallax5");
             parallaxImage[4] = Content.Load<Texture2D>("background/parallax6");
-            parallaxImage[5] = Content.Load<Texture2D>("background/parallax7");
+            //parallaxImage[5] = Content.Load<Texture2D>("background/parallax7");//Gradient Overlay
+            gradientOveraly = Content.Load<Texture2D>("background/parallax7");
             
             //Menus
             mainMenuLayers = new Texture2D[numMainMenuLayers];
@@ -280,6 +303,7 @@ namespace SynesthesiaChaos
             mainMenuLogo = Content.Load<Texture2D>("background/mainmenu/MainMenuLogo");
             playBG = Content.Load<Texture2D>("background/mainmenu/PlayBG");
             playButton = Content.Load<Texture2D>("background/mainmenu/PlayButton");
+            instructions = Content.Load<Texture2D>("background/Instructions");
             gameover = Content.Load<Texture2D>("gameover");
             paused = Content.Load<Texture2D>("paused");
 
@@ -288,7 +312,6 @@ namespace SynesthesiaChaos
                 parallaxPosition[0, i] = new Vector2(-parallaxImage[i].Width, 0);
                 parallaxPosition[1, i] = new Vector2(0, 0);
             }
-
 
             //Load Collisions
             cm[0] = Content.Load<Texture2D>("cm/cm0");
@@ -310,6 +333,8 @@ namespace SynesthesiaChaos
             cm[16] = Content.Load<Texture2D>("cm/cm16");
             cm[17] = Content.Load<Texture2D>("cm/cm17");
             cm[18] = Content.Load<Texture2D>("cm/cm18");
+            cm[19] = Content.Load<Texture2D>("cm/cm19");
+            cm[20] = Content.Load<Texture2D>("cm/cm20");
             cmx = Content.Load<Texture2D>("cm/cmx");
             blocker_cm = Content.Load<Texture2D>("cm/blocker_cm");
             for (int i = 0; i < numStages; i++)
@@ -321,6 +346,15 @@ namespace SynesthesiaChaos
             collisionColorArray.AddLast(make_collision_color(cmx));
             collisionColorArray.AddLast(make_collision_color(blocker_cm));
 
+            //Touch Controls
+            rightButton = Content.Load<Texture2D>("RightArrow");
+            leftButton = Content.Load<Texture2D>("LeftArrow");
+            jumpButton = Content.Load<Texture2D>("JumpButton");
+
+            rightButtonPosition = new Vector2(screenWidth-rightButton.Width -10, screenHeight - rightButton.Height);
+            leftButtonPosition = new Vector2(screenWidth-rightButton.Width - leftButton.Width - 20, screenHeight - leftButton.Height);
+            jumpButtonPosition = new Vector2(10, screenHeight - jumpButton.Height - 50);
+
             //Fonts
             scoreFont = Content.Load<SpriteFont>("fonts/ScoreFont");
             multiplierFont = Content.Load<SpriteFont>("fonts/MultiplierFont");
@@ -331,6 +365,8 @@ namespace SynesthesiaChaos
 
             //Collectibles
             heartToken = Content.Load<Texture2D>("collectibles/hearttoken");
+            pointToken = Content.Load<Texture2D>("collectibles/pointtoken");
+            burstToken = Content.Load<Texture2D>("collectibles/bursttoken");
 
             //Score
             if (!dataLoaded)
@@ -342,11 +378,15 @@ namespace SynesthesiaChaos
 
             //Sound
             waveManager.LoadWave("Content/music.wav", "bgm");
-            hit = Content.Load<SoundEffect>("hit");
-            ground = Content.Load<SoundEffect>("ground");
+            hitSound = Content.Load<SoundEffect>("hit");
+            groundSound = Content.Load<SoundEffect>("ground");
+            deflectSound = Content.Load<SoundEffect>("sounds/BulletDeflect");
+            collectSound = Content.Load<SoundEffect>("sounds/Collectible");
+            fallOffEdgeSound = Content.Load<SoundEffect>("sounds/FallOffEdge");
 
-            ground_instance = ground.CreateInstance();
+            ground_instance = groundSound.CreateInstance();
             ground_instance.Volume = 0.5f;
+            deflect_instance = deflectSound.CreateInstance();
         }
 
         /// <summary>
@@ -370,7 +410,7 @@ namespace SynesthesiaChaos
             if ((GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape)) &&
                     oldstate.IsKeyUp(Keys.Escape))
             {
-                if (gameState == PAUSED || gameState == GAMEOVER)
+                if (gameState == PAUSED || gameState == GAMEOVER || gameState == INSTRUCTIONS)
                 {
                     gameState = MAINMENU;
                     waveManager.StopSong();
@@ -395,8 +435,22 @@ namespace SynesthesiaChaos
                     numTaps++;//All of this to get the number of fingers on the screen and each one's position.
                 }
             }
-
-
+            //Calculate the timer for when it is pressed.
+            if (numTaps > 0)
+            {
+                tapTimer = tapTimerMax;
+                displayTouchControls = true;
+            }
+            else if (tapTimerMax > 0)
+            {
+                tapTimer--;
+                displayTouchControls = true;
+            }
+            //Displaying Touch Controls
+            if (tapTimer <= 0)
+            {
+                displayTouchControls = false;
+            }
 
             //Pausing
             if ((Keyboard.GetState().IsKeyDown(Keys.P) || Keyboard.GetState().IsKeyDown(Keys.Enter)) &&
@@ -407,7 +461,7 @@ namespace SynesthesiaChaos
                 else if (gameState == PAUSED)
                     gameState = GAME;
             }
-            else if (numTaps >= 3 || gesture.GestureType == GestureType.Flick)
+            else if (numTaps >= 5)
             {
                 if (gameState == GAME && numTaps >= 3)
                     gameState = PAUSED;
@@ -435,7 +489,15 @@ namespace SynesthesiaChaos
                     }
                 }
 
-                if (Keyboard.GetState().IsKeyDown(Keys.Enter) || gesture.GestureType == GestureType.Tap)
+                if ((Keyboard.GetState().IsKeyDown(Keys.Enter) && (oldstate.IsKeyUp(Keys.Enter))) || gesture.GestureType == GestureType.Tap)
+                {
+                    gameState = INSTRUCTIONS;
+                }
+            }
+            //Menu
+            else if (gameState == INSTRUCTIONS)
+            {
+                if ((Keyboard.GetState().IsKeyDown(Keys.Enter) && (oldstate.IsKeyUp(Keys.Enter))) || gesture.GestureType == GestureType.Tap)
                 {
                     gameState = GAME;
 
@@ -447,8 +509,33 @@ namespace SynesthesiaChaos
             //Game
             else if (gameState == GAME)
             {
+                //Manage Touch Controls
+                //Default them to false and check again every time.
+                player.touchingRight = false;
+                player.touchingLeft = false;
+                player.touchingJump = false;
+                foreach (TouchLocation tl in touchCollection)
+                {
+                    if ((tl.State == TouchLocationState.Pressed)
+                            || (tl.State == TouchLocationState.Moved))
+                    {
+                        if (new Rectangle((int)tl.Position.X, (int)tl.Position.Y, 5, 5).Intersects(new Rectangle((int)rightButtonPosition.X, (int)rightButtonPosition.Y, rightButton.Width, rightButton.Height)))
+                        {
+                            player.touchingRight = true;
+                        }
+                        else if (new Rectangle((int)tl.Position.X, (int)tl.Position.Y, 5, 5).Intersects(new Rectangle((int)leftButtonPosition.X, (int)leftButtonPosition.Y, leftButton.Width, leftButton.Height)))
+                        {
+                            player.touchingLeft = true;
+                        }
+                        else if (new Rectangle((int)tl.Position.X, (int)tl.Position.Y, 5, 5).Intersects(new Rectangle((int)jumpButtonPosition.X, (int)jumpButtonPosition.Y, jumpButton.Width, jumpButton.Height)))
+                        {
+                            player.touchingJump = true;
+                        }
+                    }
+                }
+
                 //Do all of the player stuff.
-                player.Update(stages, gameTime, level, gesture);
+                player.Update(stages, gameTime, level);
 
                 //Update the camera.
                 camera(player);
@@ -482,7 +569,7 @@ namespace SynesthesiaChaos
                             if (playerHurtTimer <= 0 && !player.invincible)//Don't let the player get hurt too much.
                             {
                                 lives -= 1;
-                                hit.Play();
+                                hitSound.Play();
                                 playerHurtTimer = playerHurtTimerMax;
                                 paint_splat(fragments.ElementAt(i).color);
                             }
@@ -493,6 +580,7 @@ namespace SynesthesiaChaos
                         {
                             fragments.ElementAt(i).deflect();
                             score += 30 * burstMultiplier;
+                            deflect_instance.Play();
                         }
                     }
                     //Remove frags that hit the ground or go offscreen.
@@ -526,8 +614,24 @@ namespace SynesthesiaChaos
                     //Pick up the collectible
                     if (player.rectangle.Intersects(collectibles.ElementAt(i).rectangle))
                     {
-                        lives++;
+                        //Do varying stuff.
+                        if (collectibles.ElementAt(i).type == 0)//Heart
+                            lives++;
+                        else if (collectibles.ElementAt(i).type == 1)//Points
+                            score += 800 + 200*burstMultiplier;
+                        else if (collectibles.ElementAt(i).type == 2)//Burst
+                        {
+                            if (player.burstMode)//If you are already in burst mode, increase multiplyer.
+                            {
+                                player.burstDistance += burstMultiplierFactor;
+                            }
+                            player.burstTimer = player.burstTimerMax;
+                            player.burstMode = true;
+                        }
+
+                        //Remove it.
                         collectibles.Remove(collectibles.ElementAt(i));
+                        collectSound.Play();
                     }
                     else
                     {
@@ -546,9 +650,9 @@ namespace SynesthesiaChaos
                 if (player.position.Y >= screenHeight)
                 {
                     lives -= 1;
-                    hit.Play();
+                    fallOffEdgeSound.Play();
                     //player.position.Y = screenHeight / 3;
-                    
+
                     player.speedY = 20;//Fly upward
                     player.flyUp = true;
                     player.invincible = true;
@@ -608,8 +712,30 @@ namespace SynesthesiaChaos
                     spriteBatch.Draw(mainMenuLayers[i], new Vector2(0, 0), Color.White);
                 }
                 spriteBatch.Draw(mainMenuLogo, new Vector2(0, 0), Color.White);
-            }
 
+                //Buttons
+                /*Color[] colorArray = new Color[playBG.Height * playBG.Width];
+                Color[] bgArray = new Color[playBG.Height * playBG.Width];
+                Color color = Movable.get_random_color(random);
+                playBG.GetData<Color>(bgArray);
+
+                for (int i = 0; i < colorArray.Length; i++)
+                {
+                    if (bgArray[i].A != 0)
+                    {
+                        colorArray[i] = color;
+                    }
+                }
+                Rectangle splatRect = new Rectangle(0, 0, playBG.Width, playBG.Height);
+                playBG.SetData<Color>(0, splatRect, colorArray, 0, colorArray.Length);*/
+                spriteBatch.Draw(playBG, new Vector2(750, 450), Color.White);
+                spriteBatch.Draw(playButton, new Vector2(750, 450), Color.White);
+            }
+            //Instructions
+            else if (gameState == INSTRUCTIONS)
+            {
+                spriteBatch.Draw(instructions, new Vector2(0, 0), Color.White);
+            }
             //Call Game
             else if (gameState == GAME || gameState == PAUSED)
             {
@@ -619,6 +745,7 @@ namespace SynesthesiaChaos
                     for (int i = 0; i < 2; i++)//Canonly have 2 backgrounds. They need to be > 1920 in width.
                         spriteBatch.Draw(parallaxImage[j], new Vector2(parallaxPosition[i, j].X, parallaxPosition[i, j].Y), Color.White);//Parallaxing bg
                 }
+                spriteBatch.Draw(gradientOveraly, new Vector2(0,0), Color.White);//Gradient
 
                 //Draw the stages over the player
                 for (int i = 0; i < stages.Count(); i++)
@@ -672,6 +799,14 @@ namespace SynesthesiaChaos
                 {
                     spriteBatch.DrawString(multiplierFont, "X" + burstMultiplier, new Vector2(player.position.X, player.position.Y - 30), Movable.get_random_color(random));//CRAZY RANDOM OMG
                 }
+                //Touch Controls
+                if(displayTouchControls)
+                {
+                    spriteBatch.Draw(rightButton, new Vector2(screenWidth-rightButton.Width -10, screenHeight - rightButton.Height), Color.White);
+                    spriteBatch.Draw(leftButton, new Vector2(screenWidth-rightButton.Width - leftButton.Width - 20, screenHeight - leftButton.Height), Color.White);
+                    spriteBatch.Draw(jumpButton, new Vector2(10, screenHeight - jumpButton.Height - 50), Color.White);
+                }
+
                 //Paused
                 if (gameState == PAUSED)
                 {
@@ -774,11 +909,24 @@ namespace SynesthesiaChaos
                 {
                     stages.AddLast(random_stage(new Vector2(stages.Last().position.X + stages.Last().width - 20, 0)));
                     //Spawn a collectible
-                    if (random.Next(0, 2) == 0)
+                    if (true ||random.Next(0, 100) < 50)//Chance that one will spawn
                     {
-                        collectibles.AddLast(new Collectible(new Vector2(stages.Last().collectiblePositions[random.Next(0, stages.Last().numPositions)].X + stages.Last().position.X, 
-                                                                        stages.Last().collectiblePositions[random.Next(0, stages.Last().numPositions)].Y), 
-                                                                        random.Next(0, 1), heartToken));
+                        int cPosition = random.Next(0, stages.Last().numPositions);
+                        int cType = random.Next(0, 3);
+                        Texture2D tempTex;
+                        if (cType == 0)
+                            tempTex = heartToken;
+                        else if (cType == 2 && level > 0)
+                            tempTex = burstToken;
+                        else
+                        {
+                            tempTex = pointToken;
+                            cType = 1;//Default to Points if another criteria is not met.
+                        }
+                      
+                        collectibles.AddLast(new Collectible(new Vector2(stages.Last().collectiblePositions[cPosition].X + stages.Last().position.X,
+                                                                        stages.Last().collectiblePositions[cPosition].Y), 
+                                                                        cType, tempTex));
                     }
                 }
                 //The one before the final stage is always bg1
